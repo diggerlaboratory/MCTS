@@ -49,12 +49,18 @@ def save_frame_as_image(frame, file_path):
     
 def doTest(name,network,test_count,save=False):
     test_rewards = []
-    env = gymnasium.make(name,render_mode="rgb_array")
+    if save:
+        env = gymnasium.make(name,render_mode="rgb_array")
+        env_sim = gymnasium.make(name,render_mode="rgb_array")
+    else:
+        env = gymnasium.make(name)
+        env_sim = gymnasium.make(name)
+        
     env = DiscreteCarRacingWrapper(env)
-    env = utils.SkipFrame(env, skip=15)
-    env_sim = gymnasium.make(name,render_mode="rgb_array")
+    env = utils.SkipFrame(env, skip=10)
+
     env_sim = DiscreteCarRacingWrapper(env_sim)
-    env_sim = utils.SkipFrame(env_sim, skip=15)
+    env_sim = utils.SkipFrame(env_sim, skip=10)
     for count in range(test_count):
         frameN0 = 0
         episodic_reward = 0
@@ -89,10 +95,10 @@ def doTest(name,network,test_count,save=False):
 
 if __name__=="__main__":
     name = "CarRacing-v2"
-    env = gymnasium.make(name,render_mode="rgb_array")
+    env = gymnasium.make(name)
     env = DiscreteCarRacingWrapper(env)
     env = utils.SkipFrame(env, skip=10)
-    env_sim = gymnasium.make(name,render_mode="rgb_array")
+    env_sim = gymnasium.make(name)
     env_sim = DiscreteCarRacingWrapper(env_sim)
     env_sim = utils.SkipFrame(env_sim, skip=10)
     set_seed(42)
@@ -130,7 +136,7 @@ if __name__=="__main__":
                 break
             print(f"len(replay_buffer): {len(replay_buffer)}, batch_size:{batch_size} best_action:{best_action}")
             if len(replay_buffer) >= batch_size:
-                for update in range(min(512,2**(2*int(len(replay_buffer)/batch_size)))):
+                for update in range(min(512,64*2**(2*int(len(replay_buffer)/batch_size)))):
                     states, actions, rewards, next_states, dones = replay_buffer.sample(batch_size)
                     states_tensor = torch.tensor(states, dtype=torch.float32).to(device)
                     actions_tensor = torch.tensor(actions, dtype=torch.long).to(device)

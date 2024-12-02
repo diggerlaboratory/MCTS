@@ -124,7 +124,7 @@ class ResNetPolicyValueNetwork(nn.Module):
         self.action_dim = action_dim
 
         # ResNet-101 기반 특징 추출기
-        resnet = models.resnet101(pretrained=True)
+        resnet = models.resnet50(pretrained=True)
         resnet.fc = nn.Identity()  # Fully Connected 레이어 제거
         self.feature_extractor = resnet
 

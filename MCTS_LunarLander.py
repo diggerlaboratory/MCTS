@@ -1,13 +1,11 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-import gym
-from gym import spaces
+import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import random
-from gym.wrappers import TimeLimit
 import random
 import numpy as np
 import torch
@@ -35,18 +33,26 @@ def save_frame_as_image(frame, file_path):
     # 파일로 저장
     image.save(file_path)
     
-def doTest(name,network,test_count):
+def doTest(name,network,test_count,save=False):
     test_rewards = []
-    env = gym.make(name,render_mode="rgb_array")
-    env_sim = gym.make(name,render_mode="rgb_array")
+    if save:
+        env = gym.make(name,render_mode="rgb_array")
+        env_sim = gym.make(name,render_mode="rgb_array")
+    else:
+        env = gym.make(name)
+        env_sim = gym.make(name)
+        
+    env = utils.SkipFrame(env, skip=5)
+    env_sim = utils.SkipFrame(env_sim, skip=5)
     for count in range(test_count):
         frameN0 = 0
         episodic_reward = 0
         seed = random.randint(0,100)
         obs,info = env.reset(seed=seed)
         obs_sim,info_sim = env_sim.reset(seed=seed)
-        frame = env.render()
-        # save_frame_as_image(frame=frame,file_path=f"count_{count}_frame_{frameN0}.png")
+        if save:
+            frame = env.render()
+            save_frame_as_image(frame=frame,file_path=f"count_{count}_frame_{frameN0}.png")
         test_root = utils.MCTSNode(obs)
         test_mcts = utils.MCTS_LunarLander(env=env, sim_env=env_sim, network=network)
         while True:
@@ -55,8 +61,9 @@ def doTest(name,network,test_count):
             best_action, _ = test_root.best_child(c_puct=1.0)
             next_obs, reward, done,truncated,info = env.step(best_action)
             episodic_reward = episodic_reward + reward
-            frame = env.render()
-            # save_frame_as_image(frame=frame,file_path=f"count_{count}_frame_{frameN0}.png")
+            if save:
+                frame = env.render()
+                save_frame_as_image(frame=frame,file_path=f"count_{count}_frame_{frameN0}.png")
             obs = next_obs
             test_root = utils.MCTSNode(obs)
             if done or truncated:
@@ -71,8 +78,10 @@ def doTest(name,network,test_count):
 if __name__=="__main__":
     set_seed(42)
     name = "LunarLander-v2"
-    env = gym.make(name,render_mode="rgb_array")
-    env_sim = gym.make(name,render_mode="rgb_array")
+    env = gym.make(name)
+    env_sim = gym.make(name)
+    env = utils.SkipFrame(env, skip=5)
+    env_sim = utils.SkipFrame(env_sim, skip=5)
     state_dim = 8  # 상태 공간 크기
     action_dim = 4  # 행동 공간 크기
     network = utils.LunarLanderPolicyValueNetwork(state_dim, action_dim).to(device)
@@ -89,6 +98,7 @@ if __name__=="__main__":
         seed = random.randint(0,1000)
         obs,info = env.reset(seed=seed)
         obs_sim,_ = env_sim.reset(seed=seed)
+        
         done = False
         total_reward = 0
         root = utils.MCTSNode(obs)
@@ -106,7 +116,7 @@ if __name__=="__main__":
                 break
             print(f"len(replay_buffer): {len(replay_buffer)}, batch_size:{batch_size} best_action:{best_action}")
             if len(replay_buffer) >= batch_size:
-                for update in range(min(512,2**(2*int(len(replay_buffer)/batch_size)))):
+                for update in range(min(512,64*2**(2*int(len(replay_buffer)/batch_size)))):
                     states, actions, rewards, next_states, dones = replay_buffer.sample(batch_size)
                     states_tensor = torch.tensor(states, dtype=torch.float32).to(device)
                     actions_tensor = torch.tensor(actions, dtype=torch.long).to(device)
