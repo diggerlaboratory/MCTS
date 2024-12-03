@@ -25,12 +25,13 @@ def set_seed(seed):
 if __name__=="__main__":
     name = "CarRacing-v2"
     env = gymnasium.make(name)
-    env = utils.SkipFrame(env,10)
+    env = utils.SkipFrame(env,1)
     env = DiscreteCarRacingWrapper(env)
     set_seed(42)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     obs_shape = env.observation_space.shape
     network = utils.ResNetPolicyValueNetwork(obs_shape, env.action_space.n).to(device)
+    # network.load_state_dict(torch.load("/home/user0005/0001_MCTS_GYM/policy/CarRacing-v2/1/policy_-58.277235104547046.pth"))
     optimizer = optim.Adam(network.parameters(), lr=1e-4)
     replay_buffer = utils.ReplayBuffer(capacity=50000)
     batch_size = 128
@@ -38,4 +39,4 @@ if __name__=="__main__":
     alpha = 1.0
     beta = 0.5
     print(f"PID: {os.getpid()}")
-    doTest(name=name,network=network,test_count=1,save=True)
+    doTest(name=name,network=network,test_count=2,save=True)

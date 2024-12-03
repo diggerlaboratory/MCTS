@@ -37,5 +37,5 @@ if __name__=="__main__":
     gamma = 0.99
     alpha = 1.0
     beta = 0.5
-    network.load_state_dict(torch.load("/home/user0005/0001_MCTS_GYM/policy/LunarLander-v2/3/policy_-112.06262967278708.pth"))
+    network.load_state_dict(torch.load("/home/user0005/0001_MCTS_GYM/policy/LunarLander-v2/15/policy_-99.3160535726337.pth"))
     doTest(name=name,network=network,test_count=1,save=True)

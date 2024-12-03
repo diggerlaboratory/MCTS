@@ -57,19 +57,21 @@ def doTest(name,network,test_count,save=False):
         env_sim = gymnasium.make(name)
         
     env = DiscreteCarRacingWrapper(env)
-    env = utils.SkipFrame(env, skip=10)
+    env = utils.SkipFrame(env, skip=5)
 
     env_sim = DiscreteCarRacingWrapper(env_sim)
-    env_sim = utils.SkipFrame(env_sim, skip=10)
+    env_sim = utils.SkipFrame(env_sim, skip=5)
     for count in range(test_count):
         frameN0 = 0
         episodic_reward = 0
-        seed = random.randint(0,100)
+        seed = random.randint(0,10)
+        print(f"seed: {seed}")
         obs,info = env.reset(seed=seed)
         obs_sim,info_sim = env_sim.reset(seed=seed)
         if save:
             frame = env.render()
-            save_frame_as_image(frame=frame,file_path=f"{name}_count_{count}_frame_{frameN0}.png")
+            os.makedirs(f"./renderImage/{name}/count_{count}/",exist_ok=True)
+            save_frame_as_image(frame=frame,file_path=f"./renderImage/{name}/count_{count}/frame_{frameN0}.png")
         episodic_reward = 0
         obs,info = env.reset()
         obs = np.transpose(obs, (2, 0, 1)) / 255.0
@@ -82,12 +84,13 @@ def doTest(name,network,test_count,save=False):
             next_obs, reward, done,truncated,info = env.step(best_action)
             if save:
                 frame = env.render()
-                save_frame_as_image(frame=frame,file_path=f"{name}_count_{count}_frame_{frameN0}.png")
+                save_frame_as_image(frame=frame,file_path=f"./renderImage/{name}/count_{count}/frame_{frameN0}.png")
             next_obs = np.transpose(next_obs, (2, 0, 1)) / 255.0
             obs = next_obs
             test_root = utils.MCTSNode(obs)
             episodic_reward = episodic_reward + reward
             print(f"testing: frameNO:{frameN0} episodeNo:{count}/{test_count}")
+            print(f"reward:{reward}, done:{done}, truncated:{truncated},info: {info}")
             if done or truncated:
                 break
         test_rewards.append(episodic_reward)
@@ -97,10 +100,10 @@ if __name__=="__main__":
     name = "CarRacing-v2"
     env = gymnasium.make(name)
     env = DiscreteCarRacingWrapper(env)
-    env = utils.SkipFrame(env, skip=10)
+    env = utils.SkipFrame(env, skip=5)
     env_sim = gymnasium.make(name)
     env_sim = DiscreteCarRacingWrapper(env_sim)
-    env_sim = utils.SkipFrame(env_sim, skip=10)
+    env_sim = utils.SkipFrame(env_sim, skip=5)
     set_seed(42)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     obs_shape = env.observation_space.shape
@@ -136,7 +139,7 @@ if __name__=="__main__":
                 break
             print(f"len(replay_buffer): {len(replay_buffer)}, batch_size:{batch_size} best_action:{best_action}")
             if len(replay_buffer) >= batch_size:
-                for update in range(min(512,64*2**(2*int(len(replay_buffer)/batch_size)))):
+                for update in range(32):
                     states, actions, rewards, next_states, dones = replay_buffer.sample(batch_size)
                     states_tensor = torch.tensor(states, dtype=torch.float32).to(device)
                     actions_tensor = torch.tensor(actions, dtype=torch.long).to(device)
@@ -156,7 +159,7 @@ if __name__=="__main__":
                     loss.backward()
                     optimizer.step()
                     print(f"len(replay_buffer): {len(replay_buffer)}, batch_size:{batch_size} update count:{update}/{min(512,2**(2*int(len(replay_buffer)/batch_size)))}")
-                test_score = doTest(name=name,network=network,test_count=5,save=False)
+                test_score = doTest(name=name,network=network,test_count=2,save=False)
                 print(f"episode:{episode} update:{update} test mean:{np.mean(test_score)}")
                 if (test_score > best_reward):
                     best_reward = test_score
